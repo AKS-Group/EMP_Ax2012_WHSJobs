@@ -1,0 +1,279 @@
+﻿Exportfile for AOT version 1.0 or later
+Formatversion: 1
+
+***Element: JOB
+
+; Microsoft Dynamics AX Job: EMP_PurchLineChangeiventDimId unloaded
+; --------------------------------------------------------------------------------
+  JOBVERSION 1
+  
+  SOURCE #EMP_PurchLineChangeiventDimId
+    #///AKS:EMP 22/04/2021:
+    #static void EMP_PurchLineChangeiventDimId(Args _args)
+    #{
+    #    InventTable _inventTable;
+    #    purchline _purchline;
+    #    purchline _purchLineForUpdate;
+    #    EcoResProductMaster _ecoresproductmaster;
+    #    InventDim _inventdim;
+    #
+    #    boolean _update = false;
+    #
+    #    ttsBegin;
+    #    while select * from _purchline
+    #        where _purchline.ItemId
+    #
+    #    {
+    #
+    #      select forUpdate _purchLineForUpdate
+    #            where _purchLineForUpdate.RecId == _purchline.RecId;
+    #
+    #            if(!_purchLineForUpdate.IsFinalized)
+    #        {
+    #            _inventTable=InventTable::find(_purchLineForUpdate.itemid, _update);
+    #            //info(strFmt('%1, %2, %3, %4, %5', _purchLineForUpdate.ItemId,_inventTable.standardinventcolorid, _purchLineForUpdate.InventDimId,_purchLineForUpdate.PurchId,_purchLineForUpdate.LineNumber));
+    #
+    #            if(_inventtable.standardinventcolorid!='')
+    #            {
+    #            _inventdim.InventLocationId = "40"; //warehouse
+    #            _inventdim.Inventsiteid = "1"; //site
+    #            _inventdim.inventcolorid = _inventTable.standardinventcolorid;
+    #            _purchlineforupdate.inventdimid = InventDim::findOrCreate(_inventdim).inventdimid;
+    #
+    #            //info(strFmt('%1',_purchlineforupdate.InventDimId));
+    #            _purchLineForUpdate.update();
+    #
+    #            }
+    #            else
+    #            {
+    #
+    #            _purchLineForUpdate.InventDimId='000434'; //the inventdimid only site and warehouse set
+    #            _purchLineForUpdate.update();
+    #            //info(strFmt('%1',_purchlineforupdate.InventDimId));
+    #            }
+    #
+    #
+    #        }
+    #
+    #        //_purchline=PurchLine::findItemIdInventDimId(_purchline.PurchId, _purchline.ItemId, _purchline.InventDimId,_purchline.LineNumber);
+    #        //info(strFmt('%1, %2, %3, %4', _purchline.ItemId, _purchline.InventDimId,_purchline.PurchId,_purchline.LineNumber));
+    #
+    #    }
+    #     ttsCommit;
+    #
+    #}
+  ENDSOURCE
+  PROPERTIES
+    Origin              #{200A3360-B71E-4A5C-BC60-A243D0247B88}
+  ENDPROPERTIES
+  
+
+***Element: JOB
+
+; Microsoft Dynamics AX Job: EMP_SetSiteSpecificSettings unloaded
+; --------------------------------------------------------------------------------
+  JOBVERSION 1
+  
+  SOURCE #EMP_SetSiteSpecificSettings
+    #///AKS:EMP 16/04/2021:
+    #static void EMP_SetSiteSpecificSettings(Args _args)
+    #{
+    #    InventTable inventTable;
+    #    InventItemInventSetup inventItemInventSetup;
+    #    InventItemPurchSetup inventItemPurchSetup;
+    #    InventItemSalesSetup inventItemSalesSetup;
+    #    InventDim               _inventdimPurch;
+    #    InventDim               inventDim;
+    #    DataArea                dataArea;
+    #    InventDimid             inventDimid;
+    #    InventDim               lInventDim;
+    #    Inventsite              inventSite;
+    #
+    #    ;
+    #
+    #     While select dataArea where !dataArea.isVirtual
+    #    {
+    #
+    #        changeCompany(dataArea.Id)
+    #        {
+    #            inventDimid = "";
+    #            inventTable = null;
+    #
+    #            while select inventTable where inventTable.dataAreaId == dataArea.Id && InventTable.itemid like 'f-m'
+    #            {
+    #                InventItemPurchSetup = null;
+    #                _inventdimPurch = null;
+    #                inventItemPurchSetup = null;
+    #                inventItemSalesSetup = null;
+    #                inventItemInventSetup = null;
+    #                inventSite = null;
+    #                select firstonly inventSite where inventSite.dataAreaId ==  dataArea.Id;
+    #                if (inventsite.RecId)
+    #                {
+    #                    inventDim.InventSiteId = inventsite.SiteId;
+    #                }
+    #                else
+    #                {
+    #
+    #                        inventDim.InventSiteId     = "1";//site name
+    #
+    #                }
+    #                inventDimid = InventDim::findOrCreate(inventDim).inventDimId;
+    #
+    #                if(inventDimid && inventTable.ItemId)//if _inventdimid -- BEGIN
+    #                {
+    #                    if(InventItemPurchSetup::exist(inventTable.ItemId,inventDimid) == false)
+    #                    {
+    #
+    #                        ttsbegin;
+    #                        inventItemPurchSetup.InventDimId           = inventDimid;
+    #                        inventItemPurchSetup.ItemId                = inventTable.ItemId;
+    #                            _inventdimPurch.InventLocationId            = "40";//warehouse name
+    #                            inventItemPurchSetup.InventDimIdDefault    = InventDim::findOrCreate(_inventdimPurch).inventDimId;
+    #                        inventItemPurchSetup.insert();
+    #                        inventItemPurchSetup.validateWrite();
+    #                        inventItemInventSetup.ItemId               = inventTable.ItemId;
+    #                            inventItemInventSetup.InventDimId          = inventItemPurchSetup.InventDimId;
+    #                            inventItemInventSetup.InventDimIdDefault   = InventDim::findOrCreate(_inventdimPurch).inventDimId;
+    #                        inventItemInventSetup.insert();
+    #                        inventItemInventSetup.validateWrite();
+    #                        inventItemSalesSetup.ItemId               = inventTable.ItemId;
+    #                            inventItemSalesSetup.InventDimId          = inventItemPurchSetup.InventDimId;
+    #                            inventItemSalesSetup.InventDimIdDefault   = InventDim::findOrCreate(_inventdimPurch).inventDimId;
+    #                        inventItemSalesSetup.insert();
+    #                        inventItemSalesSetup.validateWrite();
+    #                        ttscommit;
+    #
+    #                   }
+    #
+    #                 }
+    #            }//while
+    #        }// change company
+    #    }//while
+    #}
+  ENDSOURCE
+  PROPERTIES
+    Origin              #{C3B73578-2E1E-46ED-878A-1246075074FA}
+  ENDPROPERTIES
+  
+
+***Element: JOB
+
+; Microsoft Dynamics AX Job: EMP_WHSEnableItem unloaded
+; --------------------------------------------------------------------------------
+  JOBVERSION 1
+  
+  SOURCE #EMP_WHSEnableItem
+    #///AKS:EMP 16/04/2021:
+    #static void EMP_WHSEnableItem(Args _args)
+    #{
+    #    InventTable _inventTable;
+    #    EcoResStorageDimensionGroupItem stDimGrpItem;
+    #    EcoResStorageDimensionGroupProduct stDimGrpProduct;
+    #    EcoResProduct EcResProduct;
+    #    DataAreaId dataid;
+    #    WHSInventTable WHSInvTab;
+    #    WHSReservationHierarchyItem tab;
+    #
+    #    boolean _forupdate = false;
+    #    dataid=curext();
+    #
+    #    ttsBegin;
+    #    while select * from _inventTable
+    #        where _inventTable.ItemId like 'f-m*'
+    #    {
+    #
+    #        stdimgrpproduct = EcoResStorageDimensionGroupProduct::findByProduct(_inventTable.product,_forupdate);
+    #
+    #        stdimgrpproduct.selectForUpdate(true);
+    #        stdimgrpproduct.doDelete();
+    #
+    #
+    #        stDimGrpItem = EcoResStorageDimensionGroupItem::findByItem(dataid,_inventTable.ItemId);
+    #        stDimGrpItem.selectForUpdate(true);
+    #        stDimGrpItem.StorageDimensionGroup = 5637146076; // SiteWHLoc storage dimension group // siteWH -> 5637144577
+    #        stDimGrpItem.doUpdate();
+    #
+    #        if (EcoResStorageDimensionGroup::find(stDimGrpItem.StorageDimensionGroup).IsWarehouseWHSEnabled)
+    #        {
+    #            changeCompany(stDimGrpItem.ItemDataAreaId)
+    #            {
+    #                WHSInventEnabled::addItem(stDimGrpItem.ItemId);
+    #            }
+    #        }
+    #
+    #        if (WHSInventEnabled::exist(_inventTable.ItemId))
+    #        {
+    #            if (!WHSReservationHierarchyItem::findByItem(dataid, _inventTable.ItemId))
+    #            {
+    #               tab.ItemDataAreaId       = curext();
+    #               tab.ItemId               =_inventTable.ItemId;
+    #               tab.ReservationHierarchy =5637144576;//default reservation hierrachy
+    #               tab.insert();
+    #            }
+    #        }
+    #
+    #        WHSInvtab= WHSInventTable::find(_inventTable.ItemId);
+    #        whsinvtab.selectForUpdate(true);
+    #        whsinvtab.UOMSeqGroupId = 'DefaultStk'; //DefaultStk unit sequence group
+    #        whsinvtab.doUpdate();
+    #
+    #    }
+    #     ttsCommit;
+    #
+    #}
+  ENDSOURCE
+  PROPERTIES
+    Origin              #{F88F3795-57DC-4E67-B8A4-00F55982DED4}
+  ENDPROPERTIES
+  
+
+***Element: PRN
+
+; Microsoft Dynamics AX Project : AKS_EMP_ChangeWHSParameters unloaded
+; --------------------------------------------------------------------------------
+  PROJECTVERSION 2
+  
+  PROJECT #AKS_EMP_ChangeWHSParameters
+  SHARED
+  PROPERTIES
+    Name                #AKS_EMP_ChangeWHSParameters
+    Origin              #{6BB09647-6F45-4817-B12C-DF22008BAC27}
+  ENDPROPERTIES
+  
+    PROJECTCLASS ProjectNode
+    GROUP #Jobs
+      PROPERTIES
+        Name                #Jobs
+        ProjectGroupType    #Jobs
+        GroupMask           #
+        PreventEditProperties #No
+      ENDPROPERTIES
+      
+      BEGINNODE
+        FILETYPE 0
+        UTILTYPE 5
+        UTILOBJECTID 0
+        NODETYPE 215
+        NAME #EMP_PurchLineChangeiventDimId
+      ENDNODE
+      BEGINNODE
+        FILETYPE 0
+        UTILTYPE 5
+        UTILOBJECTID 0
+        NODETYPE 215
+        NAME #EMP_SetSiteSpecificSettings
+      ENDNODE
+      BEGINNODE
+        FILETYPE 0
+        UTILTYPE 5
+        UTILOBJECTID 0
+        NODETYPE 215
+        NAME #EMP_WHSEnableItem
+      ENDNODE
+      ENDGROUP
+      
+  ENDPROJECT
+  
+
+***Element: END
